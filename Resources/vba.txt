@@ -1,0 +1,127 @@
+Sub AnalyzeStocks()
+
+    ' Declare variables
+    Dim ws As Worksheet
+    Dim LastRow As Long
+    Dim ticker As String
+    Dim firstOpen As Double
+    Dim lastClose As Double
+    Dim totalVolume As Double
+    Dim change As Double
+    Dim percentChange As Double
+    Dim i As Long, j As Long
+    Dim startRow As Long, endRow As Long
+    Dim greatestIncrease As Double
+    Dim greatestDecrease As Double
+    Dim greatestVolume As Double
+    Dim greatestIncreaseTicker As String
+    Dim greatestDecreaseTicker As String
+    Dim greatestVolumeTicker As String
+    
+    ' Initialize tracking for the greatest values
+    greatestIncrease = -999999
+    greatestDecrease = 999999
+    greatestVolume = 0
+
+    ' Loop through each worksheet in the workbook, skipping Sheet A and Sheet B
+    For Each ws In ThisWorkbook.Worksheets
+    
+        ' Skip Sheet A and Sheet B
+        If ws.Name = "Sheet A" Or ws.Name = "Sheet B" Then
+            GoTo SkipSheet
+        End If
+    
+        ' Find the last row with data in the current worksheet
+        LastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).Row
+        
+        ' Initialize row tracking variables
+        startRow = 2
+        j = 0 ' Reset j for each worksheet
+        
+        ' Create headers for the output columns (starting from column I)
+        ws.Cells(1, 9).Value = "Ticker"
+        ws.Cells(1, 10).Value = "Quarterly Change"
+        ws.Cells(1, 11).Value = "Percent Change"
+        ws.Cells(1, 12).Value = "Total Stock Volume"
+        
+        ' Loop through each stock ticker in the current worksheet
+        i = 2 ' Start at row 2 to skip headers
+        While i <= LastRow
+            ticker = ws.Cells(i, 1).Value
+            firstOpen = ws.Cells(i, 3).Value
+            totalVolume = 0
+            endRow = i
+            
+            ' Find the range for each ticker and calculate the total volume
+            Do While ws.Cells(endRow, 1).Value = ticker And endRow <= LastRow
+                totalVolume = totalVolume + ws.Cells(endRow, 7).Value
+                endRow = endRow + 1
+            Loop
+            
+            ' Get the last closing price for the ticker
+            lastClose = ws.Cells(endRow - 1, 6).Value
+            
+            ' Calculate change and percentage change
+            change = lastClose - firstOpen
+            If firstOpen <> 0 Then
+                percentChange = (change / firstOpen) * 100
+            Else
+                percentChange = 0
+            End If
+            
+            ' Output the results starting from column I
+            ws.Cells(j + 2, 9).Value = ticker
+            ws.Cells(j + 2, 10).Value = Round(change, 2)
+            ws.Cells(j + 2, 11).Value = Round(percentChange, 2) & "%"
+            ws.Cells(j + 2, 12).Value = totalVolume
+            
+            ' Apply conditional formatting
+            If change > 0 Then
+                ws.Cells(j + 2, 10).Interior.Color = vbGreen
+                ws.Cells(j + 2, 11).Interior.Color = vbGreen
+            ElseIf change < 0 Then
+                ws.Cells(j + 2, 10).Interior.Color = vbRed
+                ws.Cells(j + 2, 11).Interior.Color = vbRed
+            End If
+            
+            ' Check for greatest increase/decrease and volume
+            If percentChange > greatestIncrease Then
+                greatestIncrease = percentChange
+                greatestIncreaseTicker = ticker
+            End If
+            
+            If percentChange < greatestDecrease Then
+                greatestDecrease = percentChange
+                greatestDecreaseTicker = ticker
+            End If
+            
+            If totalVolume > greatestVolume Then
+                greatestVolume = totalVolume
+                greatestVolumeTicker = ticker
+            End If
+            
+            ' Move to the next ticker
+            i = endRow
+            j = j + 1
+        Wend
+        
+SkipSheet:
+    Next ws
+    
+    ' Output greatest increase, decrease, and volume on the last worksheet
+    Dim lastSheet As Worksheet
+    Set lastSheet = ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count)
+    
+    lastSheet.Cells(2, 15).Value = "Greatest % Increase"
+    lastSheet.Cells(2, 16).Value = greatestIncreaseTicker
+    lastSheet.Cells(2, 17).Value = Round(greatestIncrease, 2) & "%"
+    
+    lastSheet.Cells(3, 15).Value = "Greatest % Decrease"
+    lastSheet.Cells(3, 16).Value = greatestDecreaseTicker
+    lastSheet.Cells(3, 17).Value = Round(greatestDecrease, 2) & "%"
+    
+    lastSheet.Cells(4, 15).Value = "Greatest Total Volume"
+    lastSheet.Cells(4, 16).Value = greatestVolumeTicker
+    lastSheet.Cells(4, 17).Value = greatestVolume
+    
+End Sub
